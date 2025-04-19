@@ -1,5 +1,5 @@
 # Usa una imagen base con Python y TensorFlow
-FROM tensorflow/tensorflow:2.13.0
+FROM tensorflow/tensorflow:2.12.0
 
 # Instala dependencias del sistema (para opencv)
 RUN apt-get update && apt-get install -y \
