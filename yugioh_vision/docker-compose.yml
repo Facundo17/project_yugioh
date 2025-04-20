@@ -5,12 +5,36 @@ services:
     ports:
       - "8000:8000"
     depends_on:
+      - redis
       - model-service
+    restart: unless-stopped
+    networks:
+      - shared_network
     
   model-service:
     build: ./model
     ports:
       - "8001:8001"
+    networks:
+      - shared_network
 
   redis:
     image: redis:6.2.6
+    networks:
+      - shared_network
+  
+  ui-service:
+    build: ./ui
+    container_name: yugioh-ui
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    networks:
+      - shared_network
+
+networks:
+  shared_network:
+    external: true
+
+volumes:
+  yugioh_data:
