@@ -1,38 +1,226 @@
 <!DOCTYPE html>
-<html>
-<head><title>YuGiOh Classifier</title></head>
-<body>
-  <h1>Clasificador de Cartas YuGiOh</h1>
-  <form id="uploadForm">
-    <input type="file" id="fileInput" accept="image/*" />
-    <button type="submit">Clasificar</button>
-  </form>
-  <ul id="result"></ul>
-  <p id="result"></p>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Clasificador Yu-Gi-Oh</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(to right, #2b2e4a, #e84545);
+        color: #fff;
+        text-align: center;
+        padding: 50px;
+      }
 
-  <script>
-    document.getElementById("uploadForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const file = document.getElementById("fileInput").files[0];
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("http://localhost:8000/predict", {
-        method: "POST",
-        body: formData
+      h1 {
+        font-size: 2.5em;
+        margin-bottom: 30px;
+      }
+
+      #uploadForm {
+        margin-bottom: 20px;
+      }
+
+      input[type="file"] {
+        padding: 10px;
+        border-radius: 6px;
+        border: none;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        background-color: #903749;
+        color: white;
+        border-radius: 6px;
+        margin-left: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+      }
+
+      button:disabled {
+        background-color: #777;
+        cursor: wait;
+      }
+
+      #resultCard {
+        margin-top: 30px;
+        background-color: #fff;
+        color: #2b2e4a;
+        padding: 20px;
+        border-radius: 12px;
+        width: 320px;
+        margin-left: auto;
+        margin-right: auto;
+        box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      #resultCard img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+      }
+
+      #resultCard h2 {
+        margin-top: 15px;
+        font-size: 1.8em;
+      }
+
+      #confidence {
+        font-size: 1.2em;
+        color: #555;
+      }
+
+      #history {
+        margin-top: 40px;
+        text-align: left;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .history-item {
+        background: #fff;
+        color: #2b2e4a;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        margin-bottom: 10px;
+        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .history-item img {
+        height: 60px;
+        border-radius: 8px;
+        margin-right: 15px;
+      }
+
+      .history-item .info {
+        display: flex;
+        flex-direction: column;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Demo Yu-Gi-Oh Card Detector</h1>
+
+    <form id="uploadForm">
+      <input type="file" id="fileInput" accept="image/*" />
+      <button id="submitBtn" type="submit">Process</button>
+    </form>
+
+    <div id="resultCard" style="display: none">
+      <img id="previewImage" src="" alt="Carta subida" />
+      <h2 id="labelText" style="display: none"></h2>
+      <p id="confidence" style="display: none"></p>
+    </div>
+
+    <div id="history" style="display: none">
+      <h2>Classification History</h2>
+      <div id="historyList"></div>
+    </div>
+
+    <script>
+      const form = document.getElementById("uploadForm");
+      const fileInput = document.getElementById("fileInput");
+      const resultCard = document.getElementById("resultCard");
+      const labelText = document.getElementById("labelText");
+      const confidenceText = document.getElementById("confidence");
+      const previewImage = document.getElementById("previewImage");
+      const historyList = document.getElementById("historyList");
+      const submitBtn = document.getElementById("submitBtn");
+      const history = document.getElementById("history");
+
+      // cuando se selecciona la imagen
+      fileInput.addEventListener("change", (e) => {
+        e.preventDefault();
+
+        labelText.style.display = "none";
+        confidenceText.style.display = "none";
+
+        // obtener el file del input
+        const file = fileInput.files[0];
+
+        // FileReader para leer la imagen subida
+        const reader = new FileReader();
+
+        // mostrar la imagen en el preview
+        reader.onload = function (e) {
+          previewImage.src = e.target.result;
+          resultCard.style.display = "block";
+        };
+        reader.readAsDataURL(file);
       });
-      const data = await res.json();
 
-      let item = document.createElement('li');
-      let text = document.createElement('p');
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const file = fileInput.files[0];
 
-      text.innerText =  `Tipo: ${data.label} | Confianza: ${(data.confidence * 100).toFixed(2)}%`;
+        if (!file) {
+          alert("Please, select an image file");
+          return;
+        }
 
-      item.appendChild(text);
-      document.getElementById("result").appendChild(item);
+        // Deshabilitar botón y cambiar texto
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Processing...";
 
-      /*document.getElementById("result").innerText = 
-        `Tipo: ${data.label} | Confianza: ${(data.confidence * 100).toFixed(2)}%`;*/
-    });
-  </script>
-</body>
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          previewImage.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        try {
+          const response = await fetch("http://localhost:8000/predict/", {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          labelText.style.display = "block";
+          confidenceText.style.display = "block";
+
+          labelText.innerText = `Card Type: ${result.label}`;
+          confidenceText.innerText = `Accuracy: ${(
+            result.confidence * 100
+          ).toFixed(2)}%`;
+          //resultCard.style.display = "block";
+
+          history.style.display = "block";
+
+          // Agregar al historial
+          const historyItem = document.createElement("div");
+          historyItem.classList.add("history-item");
+
+          const thumb = document.createElement("img");
+          thumb.src = previewImage.src;
+
+          const info = document.createElement("div");
+          info.classList.add("info");
+          info.innerHTML = `
+          <strong>${result.label}</strong>
+          <span>Accuracy: ${(result.confidence * 100).toFixed(2)}%</span>
+        `;
+
+          historyItem.appendChild(thumb);
+          historyItem.appendChild(info);
+          historyList.prepend(historyItem);
+        } catch (error) {
+          alert("Error.");
+          console.error(error);
+        }
+
+        // Restaurar el botón
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Process";
+      });
+    </script>
+  </body>
 </html>
