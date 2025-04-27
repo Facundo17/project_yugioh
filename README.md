@@ -9,3 +9,6 @@ docker network create shared_network
 
 # levantar el proyecto
 $ docker-compose up --build -d
+
+# ejecutar clasificador
+$ streamlit run classification.py
