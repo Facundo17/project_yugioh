@@ -21,7 +21,18 @@ st.markdown(
 )
 
 def process_image(file):
-    return requests.post('http://localhost:8000/predict/', file)
+    """Pasar la imagen al API
+
+    Args:
+        file (UploadedFile): La imagen de una carta
+
+    Returns:
+        JSONResponse: Devuelve el resultado si se procesó correctamente, caso contrario, un error
+        content: { label, monster, confidence }
+    """
+    url = 'http://localhost:8000/predict/'
+    file = { 'file': file.getvalue() }
+    return requests.post(url, files=file)
 
 
 def show_content():
@@ -31,7 +42,7 @@ def show_content():
     uploaded_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
     if uploaded_file is not None:
         response = process_image(uploaded_file)
-        print(response.status_code)
+        print(response.content)
             
                  
 show_content()

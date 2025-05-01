@@ -1,11 +1,9 @@
 opencv-python
-tensorflow==2.12.0
-protobuf<5.0.0dev,>=3.20.3
-numpy<1.24,>=1.22
 requests
 pandas 
 kaggle
 matplotlib
 seaborn
 ipykernel
-streamlite
+packaging<25,>=20
+streamlit
